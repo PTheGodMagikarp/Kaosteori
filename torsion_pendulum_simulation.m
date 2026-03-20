@@ -1,24 +1,31 @@
-function torsion_pendulum_simulation
+function Kaos
+    % Definition of parameters
+    beta = 47.73;    % mgd/I
+    alpha = 7.971;   % kappa/I
+    delta = 0.56;     % b/I
+    gamma = 18.92;   % A/I
+    theta0 = 0;      % Initial angular offset
+    omega_yf = 6.05;  % Driving frequency (rad/s)
 
-    % Definition of parameters 
-    beta = 92.93;   % mgd/I (gravitational torque coefficient/moment of inertia)
-    alpha = 16.66;  % kappa/I (torsional stiffness/moment of inertia)
-    delta = 0.58;   % b/I (damping coefficient/moment of inertia)
-    gamma = 9.672;    % A/I (driving amplitude/moment of inertia)
-    theta0 = 0;     % Initial angular offset
-    omega_yf = 7.2; % Driving frequency (rad/s)
+    % Time span for simulation
+    tspan = [0 10000]; % Time span to capture the dynamics
 
-    % Time span for simulation (start and end time)
-    tspan = [0 10];
-
-    % Set ODE solver options for smaller step size (more points)
+    % Set ODE solver options
     options = odeset('MaxStep', 0.01, 'RelTol', 1e-6, 'AbsTol', 1e-6);
 
-    % Define a grid of initial conditions for theta and omega
-    theta_range = linspace(-2, 2, 2); % 2 values for theta
-    omega_range = linspace(-2, 2, 2); % 2 values for omega
-    [theta_init, omega_init] = meshgrid(theta_range, omega_range);
-    initial_conditions = [theta_init(:), omega_init(:)];
+    % Define one initial condition for theta and omega
+    initial_condition = [0.1, 0]; % Initial condition: [theta, omega]
+
+    % Solve the system of ODEs
+    x0 = [initial_condition(1); initial_condition(2); 0];
+    [t, y] = ode45(@(t, x) pendulum_ode(t, x, gamma, delta, alpha, theta0, beta, omega_yf), tspan, x0, options);
+
+    % Extract theta and omega for plotting
+    theta = y(:, 1); % Angular displacement
+    omega = y(:, 2); % Angular velocity
+
+    % Calculate the driving force for the z-axis
+    Z = gamma * cos(omega_yf * t);
 
     % Initialize 2D figure
     figure;
@@ -28,42 +35,47 @@ function torsion_pendulum_simulation
     xlabel('\theta (rad)', 'FontSize', 12);
     ylabel('\omega (rad/s)', 'FontSize', 12);
     grid on;
-    axis tight;
+    plot(theta, omega, 'b-', 'LineWidth', 1);
+    hold off;
 
     % Initialize 3D figure
     figure;
     set(gcf, 'Color', 'w');
     hold on;
     title('3D Phase Portrait of Torsion Pendulum', 'FontSize', 12);
+    xlabel('X (\theta)', 'FontSize', 12);
+    ylabel('Y (\omega)', 'FontSize', 12);
+    zlabel('Z (\gamma cos(\omega_{yf} t))', 'FontSize', 12);
+    grid on;
+    view(30, 45);
+    plot3(theta, omega, Z, 'b-', 'LineWidth', 1);
+    hold off;
+
+    % Plot angular frequency (omega) as a function of time
+    figure;
+    set(gcf, 'Color', 'w');
+    hold on;
+    title('Angular Frequency vs. Time', 'FontSize', 12);
+    xlabel('Time (s)', 'FontSize', 12);
+    ylabel('\omega (rad/s)', 'FontSize', 12);
+    grid on;
+    plot(t, omega, 'r-', 'LineWidth', 0.5);
+    hold off;
+
+    % Poincaré plot
+    T = 2*pi/omega_yf; % Period of the driving force
+    % Find indices where t is a multiple of T
+    poincare_indices = find(mod(t, T) < 0.001| mod(t, T) > T-0.001);
+
+    % Plot Poincaré section
+    figure;
+    set(gcf, 'Color', 'w');
+    hold on;
+    title('Poincaré Section of Torsion Pendulum', 'FontSize', 12);
     xlabel('\theta (rad)', 'FontSize', 12);
     ylabel('\omega (rad/s)', 'FontSize', 12);
-    zlabel('Time (s)', 'FontSize', 12);
     grid on;
-    view(45, 30); % Set a better 3D view angle
-
-    % Define colormap for trajectories
-    colors = parula(size(initial_conditions, 1));
-
-    % Loop over the initial conditions
-    for i = 1:size(initial_conditions, 1)
-        % Initial conditions: [theta; omega; t]
-        x0 = [initial_conditions(i, 1); initial_conditions(i, 2); 0];
-
-        % Solve the system of ODEs
-        [t, y] = ode45(@(t, x) pendulum_ode(t, x, gamma, delta, alpha, theta0, beta, omega_yf), tspan, x0, options);
-
-        % Extract theta, omega, and time for plotting
-        theta = y(:, 1); % Angular displacement
-        omega = y(:, 2); % Angular velocity
-
-        % Plot 2D phase portrait
-        figure(1);
-        plot(theta, omega, 'Color', colors(i, :), 'LineWidth', 1.0);
-
-        % Plot 3D phase portrait
-        figure(2);
-        plot3(theta, omega, t, 'Color', colors(i, :), 'LineWidth', 1.0);
-    end
+    plot(theta(poincare_indices), omega(poincare_indices), 'ko', 'MarkerSize', 0.5, 'MarkerFaceColor', 'r');
     hold off;
 end
 
@@ -71,6 +83,6 @@ end
 function dxdt = pendulum_ode(t, x, gamma, delta, alpha, theta0, beta, omega_yf)
     dxdt = zeros(3, 1);
     dxdt(1) = x(2); % d(theta)/dt = omega
-    dxdt(2) = gamma * cos(omega_yf * x(3)) - delta * x(2) - alpha * x(1) - theta0 + beta * sin(x(1)); % d(omega)/dt
+    dxdt(2) = gamma * cos(omega_yf * t) - delta * x(2) - alpha * x(1) - theta0 + beta * sin(x(1));
     dxdt(3) = 1; % dt/dt = 1
 end
