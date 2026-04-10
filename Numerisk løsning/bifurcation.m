@@ -1,9 +1,9 @@
 function bifurcation
 
-% Defining the parameters
+    % Defining the parameters
     beta = 47.73;    % mgd/I
     alpha = 7.971;   % kappa/I
-    delta = 0.56;     % b/I
+    delta = 0.56;    % b/I
     gamma = 18.92;   % A/I
     theta0 = 0;      % Initial angular offset
 
@@ -13,11 +13,14 @@ function bifurcation
     omega_yf_step = 0.1;
     omega_yf_values = omega_yf_min:omega_yf_step:omega_yf_max;
 
-    % Define timespan
-    tspan = [0 200];
+    % Define timespan: Extend to allow transients to decay
+    tspan = [0 1000]; % Longer simulation time
 
-    % ODE solver
+    % ODE solver options
     options = odeset('MaxStep', 0.01, 'RelTol', 1e-6, 'AbsTol', 1e-6);
+
+    % Initial condition for the first run
+    initial_condition = [0.1; 0];
 
     % Store Poincaré points
     poincare_points = cell(length(omega_yf_values), 1);
@@ -25,7 +28,6 @@ function bifurcation
     % Loop over omega_yf values
     for i = 1:length(omega_yf_values)
         omega_yf = omega_yf_values(i);
-        initial_condition = [0.1; 0];
 
         % Solve the system of ODEs
         x0 = [initial_condition(1); initial_condition(2); 0];
@@ -35,13 +37,23 @@ function bifurcation
         theta = y(:, 1);
         omega = y(:, 2);
 
-        % Calculate Poincaré 
+        % Discard transient: Only using data after t = 500
+        transient_cutoff = 500;
+        idx = t >= transient_cutoff;
+        t_steady = t(idx);
+        theta_steady = theta(idx);
+        omega_steady = omega(idx);
+
+        % Calculate Poincaré points for steady-state data
         T = 2*pi/omega_yf;
-        poincare_indices = find(mod(t, T) < 0.001 | mod(t, T) > T-0.001);
-        poincare_points{i} = [theta(poincare_indices), omega(poincare_indices)];
+        poincare_indices = find(mod(t_steady, T) < 0.001 | mod(t_steady, T) > T-0.001);
+        poincare_points{i} = [theta_steady(poincare_indices), omega_steady(poincare_indices)];
+
+        % Update initial condition for the next run
+        initial_condition = [theta_steady(end); omega_steady(end)];
     end
 
-    % Plot bifurcation 
+    % Plot bifurcation diagram
     figure;
     set(gcf, 'Color', 'w');
     hold on;
@@ -57,11 +69,11 @@ function bifurcation
                  poincare_points{i}(:, 2), 'k.', 'MarkerSize', 2);
         end
     end
-    
+
     hold off;
 end
 
-% Define the system of first-order ODEs 
+% Define the system of first-order ODEs
 function dxdt = pendulum_ode(t, x, gamma, delta, alpha, theta0, beta, omega_yf)
     dxdt = zeros(3, 1);
     dxdt(1) = x(2); % d(theta)/dt = omega
