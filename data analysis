@@ -1,0 +1,48 @@
+clear plot
+
+% Load the experimental data
+a = importdata("0pihøjre pls.xlsx", ',', 1);
+time_exp = a.data(:, 1);       % Time (s)
+angle_exp = a.data(:, 2);     % Angle (rad)
+omega_exp = a.data(:, 3);     % Angular velocity (rad/s)
+
+% Definition of parameters
+gamma = 18.92;   % A/I
+omega_yf = 5.1;  % Driving frequency (rad/s)
+
+% Calculate the driving force for the z-axis
+Z = gamma * cos(omega_yf * time_exp);
+
+% 2D figure
+figure;
+set(gcf, 'Color', 'w');
+hold on;
+title('2D Phase Portrait of Torsion Pendulum', 'FontSize', 12);
+xlabel('\theta (rad)', 'FontSize', 12);
+ylabel('\omega (rad/s)', 'FontSize', 12);
+builtin('plot',angle_exp(1:15000), omega_exp(1:15000), 'b-', 'LineWidth', 1);
+grid on;
+
+% 3D figure
+figure;
+set(gcf, 'Color', 'w');
+hold on;
+title('3D Phase Portrait of Torsion Pendulum', 'FontSize', 12);
+xlabel('X (\theta)', 'FontSize', 12);
+ylabel('Y (\omega)', 'FontSize', 12);
+zlabel('Z (\gamma cos(\omega_{yf} t))', 'FontSize', 12);
+grid on;
+view(30, 45);
+builtin('plot3',angle_exp(1:15000), omega_exp(1:15000), Z(1:15000), 'b-', 'LineWidth', 1);
+hold off;
+
+% Plot angular frequency (omega) as a function of time
+figure;  
+set(gcf, 'Color', 'w');
+hold on;
+title('Angular Frequency vs. Time', 'FontSize', 12);
+xlabel('Time (s)', 'FontSize', 12);
+ylabel('\omega (rad/s)', 'FontSize', 12);
+grid on;
+builtin('plot',time_exp, omega_exp, 'b-', 'LineWidth', 1);
+hold off;
