@@ -62,7 +62,7 @@ function bifurcation
     ylabel('\omega (rad/s)', 'FontSize', 12);
     grid on;
 
-    % Plot Poincaré points for each omega_yf
+    % Plot Poincaré points for each omega_yf 
     for i = 1:length(omega_yf_values)
         if ~isempty(poincare_points{i})
             plot(omega_yf_values(i) * ones(size(poincare_points{i}, 1), 1), ...
