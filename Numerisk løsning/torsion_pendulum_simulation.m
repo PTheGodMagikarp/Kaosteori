@@ -5,29 +5,29 @@ function Kaos
     delta = 0.56;     % b/I
     gamma = 18.92;   % A/I
     theta0 = 0;      % Initial angular offset
-    omega_yf = 6.05;  % Driving frequency (rad/s)
+    omega_yf = 6.053;  % Driving frequency (rad/s)
 
     % Time span for simulation
-    tspan = [0 10000]; % Time span to capture the dynamics
+    tspan = [0 18000]; 
 
     % Set ODE solver options
     options = odeset('MaxStep', 0.01, 'RelTol', 1e-6, 'AbsTol', 1e-6);
 
-    % Define one initial condition for theta and omega
+    % Define initial condition for theta and omega
     initial_condition = [0.1, 0]; % Initial condition: [theta, omega]
 
     % Solve the system of ODEs
     x0 = [initial_condition(1); initial_condition(2); 0];
     [t, y] = ode45(@(t, x) pendulum_ode(t, x, gamma, delta, alpha, theta0, beta, omega_yf), tspan, x0, options);
 
-    % Extract theta and omega for plotting
+    % Extract theta and omega 
     theta = y(:, 1); % Angular displacement
-    omega = y(:, 2); % Angular velocity
+    omega = y(:, 2); % Angular velocity 
 
     % Calculate the driving force for the z-axis
     Z = gamma * cos(omega_yf * t);
 
-    % Initialize 2D figure
+    % 2D figure
     figure;
     set(gcf, 'Color', 'w');
     hold on;
@@ -38,7 +38,7 @@ function Kaos
     plot(theta, omega, 'b-', 'LineWidth', 1);
     hold off;
 
-    % Initialize 3D figure
+    % 3D figure
     figure;
     set(gcf, 'Color', 'w');
     hold on;
@@ -51,7 +51,7 @@ function Kaos
     plot3(theta, omega, Z, 'b-', 'LineWidth', 1);
     hold off;
 
-    % Plot angular frequency (omega) as a function of time
+    % Plotting angular frequency (omega) as a function of time
     figure;
     set(gcf, 'Color', 'w');
     hold on;
@@ -66,7 +66,7 @@ function Kaos
     T = 2*pi/omega_yf; % Period of the driving force
     % Find indices where t is a multiple of T
     poincare_indices = find(mod(t, T) < 0.001| mod(t, T) > T-0.001);
-
+  
     % Plot Poincaré section
     figure;
     set(gcf, 'Color', 'w');
@@ -76,6 +76,36 @@ function Kaos
     ylabel('\omega (rad/s)', 'FontSize', 12);
     grid on;
     plot(theta(poincare_indices), omega(poincare_indices), 'ko', 'MarkerSize', 0.5, 'MarkerFaceColor', 'r');
+    hold off;
+
+    %% Power Spectral Density 
+
+    % Define sampling frequency
+    fs = 20; % (Hz)
+
+    % Remove transient
+    steady_idx = t >= 100 * T;
+    uniform_dt = 1/fs; % Time step
+    uniform_t = min(t(steady_idx)):uniform_dt:max(t(steady_idx));
+    uniform_theta = interp1(t(steady_idx), theta(steady_idx), uniform_t, 'linear'); % Resample
+
+    % Compute PSD
+    window = hamming(128);        % Window size
+    noverlap = 64;                % Overlap
+    nfft = 1024;                  % FFT points
+    [pxx, f] = pwelch(uniform_theta, window, noverlap, nfft, fs);
+
+    % Plotting Power Spectral Density of theta
+    figure;  
+    set(gcf, 'Color', 'w');
+    hold on;
+    title('Power Spectral Density (Numerical)', 'FontSize', 12);
+    xlabel('Frequency (Hz)', 'FontSize', 12);
+    ylabel('Power/Frequency(dB/Hz)', 'FontSize', 12);
+    grid on;
+    plot(f, 10*log10(pxx), 'b-', 'LineWidth', 1);
+    xlim([0 10]);                % Limit to 10 Hz
+    xline(omega_yf/(2*pi), '--r', 'LineWidth', 1);
     hold off;
 end
 
