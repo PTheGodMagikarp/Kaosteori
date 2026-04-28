@@ -1,0 +1,40 @@
+% Import data
+a = importdata("Pointcare data.csv", ',', 1);
+
+% Extract columns
+time_exp = a.data(:,1);      % Time (s)
+angle_exp = a.data(:,2);     % Angle (rad)
+omega_exp = a.data(:,3);     % Angular velocity (rad/s)
+state = a.data(:,4);         % State (0 or 1)
+
+% Find indices where state is 1
+idx = (state == 1);
+
+% Find valid indices
+valid_angle = ~isnan(angle_exp);
+valid_omega = ~isnan(omega_exp);
+
+% Interpolate angle_exp where state is 1
+if any(valid_angle)
+    angle_exp(idx) = interp1(time_exp(valid_angle), angle_exp(valid_angle), time_exp(idx), 'linear', 'extrap');
+end
+
+% Interpolate omega_exp where state is 1
+if any(valid_omega)
+    omega_exp(idx) = interp1(time_exp(valid_omega), omega_exp(valid_omega), time_exp(idx), 'linear', 'extrap');
+end
+
+% Display only interpolated rows
+interpolated_data = [time_exp(idx), angle_exp(idx), omega_exp(idx), state(idx)];
+disp(interpolated_data);
+
+% Plot Poincaré plot
+figure;
+set(gcf, 'Color', 'w');
+hold on;
+title('Poincaré plot of Torsion Pendulum', 'FontSize', 12);
+xlabel('\theta (rad)', 'FontSize', 12);
+ylabel('\omega (rad/s)', 'FontSize', 12);
+grid on;
+builtin('plot',angle_exp(idx), omega_exp(idx), 'ko', 'MarkerSize', 0.5, 'MarkerFaceColor', 'r');
+hold off;
